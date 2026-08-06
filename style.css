@@ -1,0 +1,766 @@
+:root {
+    --color-primary: #4a90e2;
+    --color-bg: #f4f7f6;
+    --color-text: #333;
+    --color-card-bg: #fff;
+    --color-accent: #28a745;
+    --border-radius: 8px;
+}
+
+body {
+    font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: var(--color-bg);
+    color: var(--color-text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+header {
+    background-color: var(--color-primary);
+    color: white;
+    padding: 15px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 1.2rem;
+    font-weight: bold;
+}
+
+.btn-mode-toggle {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.btn-mode-toggle:active {
+    background: rgba(255, 255, 255, 0.4);
+}
+
+.main-content {
+    display: flex;
+    flex: 1;
+    padding: 20px;
+    gap: 20px;
+    box-sizing: border-box;
+}
+
+.product-selection {
+    flex: 3;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.section-title {
+    font-size: 1.1rem;
+    font-weight: bold;
+    margin: 0 0 5px 0;
+    color: #555;
+}
+
+.category-tabs {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 5px;
+}
+
+.tab-btn {
+    background-color: #e0e0e0;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    font-weight: bold;
+    cursor: pointer;
+    color: #555;
+    transition: background-color 0.2s, color 0.2s;
+}
+
+.tab-btn:active {
+    transform: scale(0.95);
+}
+
+.tab-btn.active {
+    background-color: var(--color-primary);
+    color: white;
+}
+
+.product-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 12px;
+}
+
+.product-card {
+    background: var(--color-card-bg);
+    border-radius: var(--border-radius);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+    padding: 12px;
+    text-align: center;
+    cursor: pointer;
+    transition: transform 0.1s, box-shadow 0.1s;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    border: 2px solid transparent;
+}
+
+.product-card:active {
+    transform: scale(0.97);
+    border-color: var(--color-primary);
+}
+
+.product-img-placeholder {
+    background-color: #eee;
+    width: 100%;
+    height: 70px;
+    margin-bottom: 10px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #999;
+    font-size: 0.8rem;
+    box-sizing: border-box;
+}
+
+.product-img {
+    width: 100%;
+    height: auto;
+    max-height: 120px;
+    object-fit: contain;
+    background-color: #f8f9fa;
+    border-radius: 6px;
+    display: block;
+    margin: 0 auto 10px auto;
+}
+
+.product-img-placeholder {
+    width: 100%;
+    height: 120px;
+    background-color: #e9ecef;
+    color: #adb5bd;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    font-size: 0.9rem;
+}
+
+.product-name {
+    font-weight: bold;
+    font-size: 1rem;
+    margin-bottom: 5px;
+}
+
+.product-price {
+    color: #e67e22;
+    font-size: 0.9rem;
+    margin-bottom: 10px;
+}
+
+.qty-controls {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 5px;
+    margin-top: auto;
+}
+
+.qty-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 1px solid #ccc;
+    background: #f9f9f9;
+    font-size: 1.2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #555;
+}
+
+.qty-btn:active {
+    background: #e0e0e0;
+}
+
+.qty-minus {
+    color: #d9534f;
+}
+
+.qty-plus {
+    color: #5cb85c;
+}
+
+.qty-display {
+    font-size: 1.2rem;
+    font-weight: bold;
+    min-width: 30px;
+    text-align: center;
+}
+
+.cart-section {
+    flex: 1;
+    background: var(--color-card-bg);
+    border-radius: var(--border-radius);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    height: fit-content;
+    position: sticky;
+    top: 20px;
+}
+
+.cart-item-list {
+    max-height: 250px;
+    overflow-y: auto;
+    margin-bottom: 15px;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 10px;
+}
+
+.cart-item {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    font-size: 0.95rem;
+}
+
+.cart-item-qty {
+    color: #888;
+    margin-right: 10px;
+}
+
+.cart-item-subtotal {
+    font-weight: bold;
+}
+
+.cart-summary {
+    margin-top: auto;
+}
+
+.total-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 1.2rem;
+    font-weight: bold;
+    margin-bottom: 15px;
+    color: var(--color-text);
+}
+
+.total-amount {
+    color: #c0392b;
+}
+
+.btn-checkout {
+    width: 100%;
+    background-color: var(--color-accent);
+    color: white;
+    border: none;
+    padding: 15px;
+    font-size: 1.1rem;
+    font-weight: bold;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.btn-checkout:active {
+    background-color: #218838;
+}
+
+.btn-checkout:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+}
+
+/* ==================== 管理モード画面のスタイル（左右分割） ==================== */
+.admin-container {
+    max-width: 1100px;
+    margin: 30px auto;
+    padding: 0 15px;
+    box-sizing: border-box;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.admin-header-title {
+    background: var(--color-card-bg);
+    padding: 20px 25px;
+    border-radius: var(--border-radius);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    margin-bottom: 20px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.admin-header-title h2 {
+    margin-top: 0;
+    color: #333;
+    font-size: 1.4rem;
+    margin-bottom: 5px;
+}
+
+.section-desc {
+    color: #666;
+    font-size: 0.9rem;
+    margin: 0;
+}
+
+.admin-split-wrapper {
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.admin-pane {
+    flex: 1;
+    background: var(--color-card-bg);
+    padding: 20px;
+    border-radius: var(--border-radius);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    box-sizing: border-box;
+    width: 100%;
+}
+
+.admin-section-box {
+    background: #f9f9f9;
+    padding: 15px;
+    border-radius: 6px;
+    margin-bottom: 20px;
+}
+
+.admin-section-box:last-child {
+    margin-bottom: 0;
+}
+
+.admin-section-box h3 {
+    font-size: 1rem;
+    margin-top: 0;
+    margin-bottom: 12px;
+    color: #444;
+}
+
+.form-group {
+    margin-bottom: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.form-group label {
+    font-size: 0.85rem;
+    font-weight: bold;
+    color: #555;
+}
+
+.form-group input,
+.form-group select {
+    padding: 8px;
+    font-size: 1rem;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+.btn-add {
+    background-color: var(--color-primary);
+    color: white;
+    border: none;
+    padding: 10px;
+    width: 100%;
+    font-weight: bold;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-top: 5px;
+}
+
+.btn-add:active {
+    background-color: #357abd;
+}
+
+.btn-add-inline {
+    background-color: var(--color-primary);
+    color: white;
+    border: none;
+    padding: 0 15px;
+    font-size: 0.9rem;
+    font-weight: bold;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.btn-add-inline:active {
+    background-color: #357abd;
+}
+
+#manageCategoryList {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 280px;
+    overflow-y: auto;
+}
+
+#manageProductList {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-height: 350px;
+    overflow-y: auto;
+}
+
+.manage-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #fdfdfd;
+    border: 1px solid #eee;
+    padding: 8px 10px;
+    border-radius: 4px;
+    font-size: 0.95rem;
+}
+
+.manage-product-item {
+    background: #fdfdfd;
+    border: 1px solid #eee;
+    padding: 10px;
+    border-radius: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.manage-product-form {
+    display: flex;
+    gap: 6px;
+}
+
+.manage-product-form input,
+.manage-product-form select {
+    padding: 6px;
+    font-size: 0.9rem;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-sizing: border-box;
+}
+
+.manage-product-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 6px;
+}
+
+.btn-edit {
+    background-color: #f0ad4e;
+    color: white;
+    border: none;
+    padding: 5px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: bold;
+}
+
+.btn-edit:active {
+    background-color: #ec971f;
+}
+
+.btn-delete {
+    background-color: #d9534f;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85rem;
+}
+
+.btn-delete:active {
+    background-color: #c9302c;
+}
+
+/* ==================== 会計モーダルのスタイル ==================== */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    box-sizing: border-box;
+    padding: 15px;
+}
+
+.modal-content {
+    background: var(--color-card-bg);
+    padding: 25px 25px;
+    border-radius: var(--border-radius);
+    width: 100%;
+    max-width: 480px;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.modal-content h3 {
+    margin: 0;
+    font-size: 1.5rem;
+    color: var(--color-text);
+    text-align: center;
+}
+
+.checkout-info-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 1.15rem;
+    background: #f9f9f9;
+    padding: 12px 18px;
+    border-radius: 8px;
+}
+
+.checkout-total-price {
+    font-size: 1.6rem;
+    font-weight: bold;
+    color: #c0392b;
+}
+
+.quick-cash-buttons {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 6px;
+}
+
+.cash-btn {
+    background: #e2e8f0;
+    border: none;
+    padding: 10px 4px;
+    font-size: 0.9rem;
+    font-weight: bold;
+    border-radius: 6px;
+    cursor: pointer;
+    color: #475569;
+}
+
+.cash-btn:active {
+    background: #cbd5e1;
+}
+
+/* テンキーパッドのスタイル */
+.calculator-pad {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+    background: #f1f5f9;
+    padding: 10px;
+    border-radius: 8px;
+}
+
+.calc-btn {
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    padding: 14px 0;
+    font-size: 1.2rem;
+    font-weight: bold;
+    border-radius: 6px;
+    cursor: pointer;
+    color: #334155;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.calc-btn:active {
+    background: #e2e8f0;
+}
+
+.exact-btn {
+    background: #fef08a;
+    color: #854d0e;
+    border-color: #fde047;
+    font-size: 1rem;
+}
+
+.clear-btn {
+    background: #fee2e2;
+    color: #991b1b;
+    border-color: #fca5a5;
+    font-size: 1rem;
+}
+
+.backspace-btn {
+    background: #f1f5f9;
+    color: #475569;
+    font-size: 1.2rem;
+}
+
+.change-row {
+    font-size: 1.2rem;
+    font-weight: bold;
+    padding: 14px 18px;
+}
+
+.checkout-change-price {
+    font-size: 1.6rem;
+}
+
+.modal-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 2px;
+}
+
+.btn-confirm-payment {
+    background-color: var(--color-accent);
+    color: white;
+    border: none;
+    padding: 15px;
+    font-size: 1.2rem;
+    font-weight: bold;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+}
+
+.btn-confirm-payment:active {
+    background-color: #218838;
+}
+
+.btn-confirm-payment:disabled {
+    background-color: #cbd5e1;
+    cursor: not-allowed;
+}
+
+.btn-close-modal {
+    background: transparent;
+    color: #666;
+    border: 1px solid #ccc;
+    padding: 10px;
+    font-size: 0.95rem;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+}
+
+.btn-close-modal:active {
+    background: #f1f5f9;
+}
+
+/* ==================== 売上確認関連のスタイル ==================== */
+.btn-sales-header {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.btn-sales-header:active {
+    background: rgba(255, 255, 255, 0.4);
+}
+
+.sales-product-list {
+    max-height: 280px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    background: #f9f9f9;
+    padding: 12px;
+    border-radius: 8px;
+    border: 1px solid #eee;
+}
+
+.sales-item-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #fff;
+    padding: 10px 12px;
+    border-radius: 6px;
+    border: 1px solid #e2e8f0;
+    font-size: 0.95rem;
+}
+
+/* ==================== 在庫管理関連のスタイル ==================== */
+.product-card.out-of-stock {
+    background-color: #f1f5f9;
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.product-card.out-of-stock .product-img,
+.product-card.out-of-stock .product-img-placeholder {
+    filter: grayscale(100%);
+}
+
+.product-stock-badge {
+    font-size: 0.8rem;
+    color: #475569;
+    background: #e2e8f0;
+    padding: 2px 6px;
+    border-radius: 4px;
+    display: inline-block;
+    margin-top: 4px;
+    font-weight: bold;
+}
+
+.product-stock-badge.badge-red {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+/* スマホ幅の場合 */
+@media (max-width: 768px) {
+    .main-content {
+        flex-direction: column;
+        padding: 10px;
+        gap: 10px;
+    }
+
+    .cart-section {
+        position: static;
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    .admin-container {
+        padding: 0 10px;
+        margin: 15px auto;
+    }
+
+    .admin-split-wrapper {
+        flex-direction: column;
+        width: 100%;
+    }
+
+    .admin-pane {
+        width: 100%;
+    }
+
+    .manage-product-form {
+        flex-direction: column;
+    }
+}
