@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>簡易レジ</title>
+    <title>ANレジ</title>
     <link rel="stylesheet" href="style.css">
     <!-- SheetJS (xlsx) ライブラリの読み込み -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -79,7 +79,7 @@
     </div>
 
     <header>
-        <span id="headerTitle">ANレジ</span>
+        <span id="headerTitle">ANレジ (同期中...)</span>
         <div style="display: flex; gap: 10px; align-items: center;">
             <button id="openSalesModalBtn" class="btn-sales-header">📊 売上確認</button>
             <button id="modeToggleBtn" class="btn-mode-toggle">⚙️ 管理モードに切替</button>
@@ -112,7 +112,7 @@
     <!-- ==================== 管理モード画面 ==================== -->
     <div id="adminScreen" class="admin-container" style="display: none;">
         <div class="admin-header-title">
-            <h2>ストア管理・編集</h2>
+            <h2>ストア管理・編集 (クラウド同期)</h2>
             <p class="section-desc">商品の行を上下にドラッグ＆ドロップすると、レジ画面での表示順が変わります。</p>
         </div>
 
@@ -264,59 +264,39 @@
         </div>
     </div>
 
-    <script>
-        // --- パスワード管理 ---
-        let appPassword = localStorage.getItem("pos_password") || "1234";
+    <!-- ==================== Firebase SDK (Webモジュール) ==================== -->
+    <script type="module">
+        import {initializeApp} from "https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js";
+        import {getFirestore, doc, getDoc, setDoc, onSnapshot} from "https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js";
 
-        const authModal = document.getElementById("authModal");
-        const authPasswordInput = document.getElementById("authPasswordInput");
-        const authSubmitBtn = document.getElementById("authSubmitBtn");
-        const authErrorMsg = document.getElementById("authErrorMsg");
+        // Firebase 接続設定
+        const firebaseConfig = {
+            apiKey: "AIzaSyCEHegFqxOo2SQ0cInbrVuqyX7esWD9U8",
+            authDomain: "anevent-pos-app.firebaseapp.com",
+            projectId: "anevent-pos-app",
+            storageBucket: "anevent-pos-app.firebasestorage.app",
+            messagingSenderId: "53376432876",
+            appId: "1:573376432876:web:fe153182bbb8c4b35673c9",
+            measurementId: "G-G2RNKP119D"
+        };
 
-        authSubmitBtn.addEventListener("click", () => {
-            if (authPasswordInput.value === appPassword) {
-                authModal.style.display = "none";
-                posScreen.style.display = "flex";
-                render();
-            } else {
-                authErrorMsg.style.display = "block";
-                authPasswordInput.value = "";
-            }
-        });
+        // Firebase初期化
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
 
-        authPasswordInput.addEventListener("keypress", (e) => {
-            if (e.key === "Enter") {
-                authSubmitBtn.click();
-            }
-        });
+        // --- アプリケーション状態 ---
+        let appPassword = "0107";
+        let categories = [];
+        let products = [];
+        let salesHistory = [];
+        let isCloudLoaded = false;
 
-        // パスワード変更処理
-        document.getElementById("changePasswordBtn").addEventListener("click", () => {
-            const currentInput = document.getElementById("currentPasswordInput").value;
-            const newInput = document.getElementById("newPasswordInput").value.trim();
+        let currentCategory = "すべて";
+        let isAdminMode = false;
 
-            if (currentInput !== appPassword) {
-                alert("現在のパスワードが間違っています。");
-                return;
-            }
-            if (!newInput) {
-                alert("新しいパスワードを入力してください。");
-                return;
-            }
-
-            appPassword = newInput;
-            localStorage.setItem("pos_password", appPassword);
-            document.getElementById("currentPasswordInput").value = "";
-            document.getElementById("newPasswordInput").value = "";
-            alert("パスワードを変更しました！");
-        });
-
-        // --- データ読み込み ---
-        let categories = JSON.parse(localStorage.getItem("pos_categories")) || [
-            "キーホルダー", "ステッカー", "文具", "アウトドア用品"
-        ];
-
-        let products = JSON.parse(localStorage.getItem("pos_products")) || [
+        // デフォルトの初期データ
+        const defaultCategories = ["キーホルダー", "ステッカー", "文具", "アウトドア用品"];
+        const defaultProducts = [
             {id: 1, name: "アクリルキーホルダー", price: 800, category: "キーホルダー", image: "", stock: 30, qty: 0},
             {id: 2, name: "ラバーキーホルダー", price: 900, category: "キーホルダー", image: "", stock: 25, qty: 0},
             {id: 3, name: "ロゴステッカー", price: 300, category: "ステッカー", image: "", stock: 100, qty: 0},
@@ -328,10 +308,11 @@
             {id: 9, name: "カラビナ", price: 700, category: "アウトドア用品", image: "", stock: 20, qty: 0}
         ];
 
-        let salesHistory = JSON.parse(localStorage.getItem("pos_sales_history")) || [];
-
-        let currentCategory = "すべて";
-        let isAdminMode = false;
+        // --- DOM要素 ---
+        const authModal = document.getElementById("authModal");
+        const authPasswordInput = document.getElementById("authPasswordInput");
+        const authSubmitBtn = document.getElementById("authSubmitBtn");
+        const authErrorMsg = document.getElementById("authErrorMsg");
 
         const posScreen = document.getElementById("posScreen");
         const adminScreen = document.getElementById("adminScreen");
@@ -359,11 +340,92 @@
         const resetSalesBtn = document.getElementById("resetSalesBtn");
         const exportExcelBtn = document.getElementById("exportExcelBtn");
 
-        function saveData() {
-            localStorage.setItem("pos_categories", JSON.stringify(categories));
-            localStorage.setItem("pos_products", JSON.stringify(products));
-            localStorage.setItem("pos_sales_history", JSON.stringify(salesHistory));
+        // --- Firestoreリアルタイム同期のセットアップ ---
+        async function initCloudSync() {
+            const storeRef = doc(db, "posStore", "mainData");
+
+            // 初回起動時にデータがなければデフォルトを書き込む
+            const docSnap = await getDoc(storeRef);
+            if (!docSnap.exists()) {
+                await setDoc(storeRef, {
+                    password: "0107",
+                    categories: defaultCategories,
+                    products: defaultProducts,
+                    salesHistory: []
+                });
+            }
+
+            // リアルタイムリスナー (別端末での変更が即座に反映される)
+            onSnapshot(storeRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    appPassword = data.password || "0107";
+                    categories = data.categories || [];
+                    products = data.products || [];
+                    salesHistory = data.salesHistory || [];
+
+                    isCloudLoaded = true;
+                    headerTitle.textContent = "ANレジ";
+                    render();
+                }
+            });
         }
+
+        // データをクラウド（Firestore）に保存する関数
+        async function saveData() {
+            if (!isCloudLoaded) return; // まだロード中の誤保存を防ぐ
+            try {
+                const storeRef = doc(db, "posStore", "mainData");
+                await setDoc(storeRef, {
+                    password: appPassword,
+                    categories: categories,
+                    products: products,
+                    salesHistory: salesHistory
+                });
+            } catch (error) {
+                console.error("保存エラー:", error);
+                alert("データの保存に失敗しました。ネットワーク接続を確認してください。");
+            }
+        }
+
+        // --- パスワード認証 ---
+        authSubmitBtn.addEventListener("click", () => {
+            if (authPasswordInput.value === appPassword) {
+                authModal.style.display = "none";
+                posScreen.style.display = "flex";
+                render();
+            } else {
+                authErrorMsg.style.display = "block";
+                authPasswordInput.value = "";
+            }
+        });
+
+        authPasswordInput.addEventListener("keypress", (e) => {
+            if (e.key === "Enter") {
+                authSubmitBtn.click();
+            }
+        });
+
+        // パスワード変更処理
+        document.getElementById("changePasswordBtn").addEventListener("click", async () => {
+            const currentInput = document.getElementById("currentPasswordInput").value;
+            const newInput = document.getElementById("newPasswordInput").value.trim();
+
+            if (currentInput !== appPassword) {
+                alert("現在のパスワードが間違っています。");
+                return;
+            }
+            if (!newInput) {
+                alert("新しいパスワードを入力してください。");
+                return;
+            }
+
+            appPassword = newInput;
+            await saveData();
+            document.getElementById("currentPasswordInput").value = "";
+            document.getElementById("newPasswordInput").value = "";
+            alert("パスワードをクラウド上で更新しました！");
+        });
 
         function render() {
             if (isAdminMode) {
@@ -480,7 +542,7 @@
             totalAmountEl.textContent = total.toLocaleString();
         }
 
-        function changeQty(id, delta) {
+        window.changeQty = function (id, delta) {
             const product = products.find(p => p.id === id);
             if (product) {
                 const sold = getSoldCount(product.id);
@@ -497,7 +559,7 @@
                 product.qty = newQty;
                 render();
             }
-        }
+        };
 
         function renderAdminScreen() {
             const manageCategoryListEl = document.getElementById("manageCategoryList");
@@ -508,7 +570,7 @@
                 item.className = "manage-item";
                 item.innerHTML = `
                 <input type="text" value="${cat}" id="catInput_${index}" style="flex: 1; padding: 6px; font-size: 0.95rem; border: 1px solid #ccc; border-radius: 4px; margin-right: 8px;">
-                <button class="btn-edit" onclick="renameCategory(${index})">変更</button>
+                <button class="btn-edit" onclick="window.renameCategory(${index})">変更</button>
             `;
                 manageCategoryListEl.appendChild(item);
             });
@@ -555,8 +617,8 @@
                 </div>
                 <div style="font-size: 0.85rem; color: #666; margin-top: 4px;">現在の理論残数: <strong>${remaining}個</strong> (販売済: ${sold}個)</div>
                 <div class="manage-product-actions" style="margin-top: 6px;">
-                    <button class="btn-edit" onclick="updateProduct(${product.id})">変更を保存</button>
-                    <button class="btn-delete" onclick="deleteProduct(${product.id})">削除</button>
+                    <button class="btn-edit" onclick="window.updateProduct(${product.id})">変更を保存</button>
+                    <button class="btn-delete" onclick="window.deleteProduct(${product.id})">削除</button>
                 </div>
             `;
 
@@ -579,7 +641,7 @@
                     item.classList.remove("drag-over");
                 });
 
-                item.addEventListener("drop", (e) => {
+                item.addEventListener("drop", async (e) => {
                     e.preventDefault();
                     item.classList.remove("drag-over");
                     const fromIndex = parseInt(e.dataTransfer.getData("text/plain"));
@@ -588,7 +650,7 @@
                     if (fromIndex !== toIndex) {
                         const movedItem = products.splice(fromIndex, 1)[0];
                         products.splice(toIndex, 0, movedItem);
-                        saveData();
+                        await saveData();
                         render();
                     }
                 });
@@ -597,7 +659,7 @@
             });
         }
 
-        document.getElementById("addCategoryBtn").addEventListener("click", () => {
+        document.getElementById("addCategoryBtn").addEventListener("click", async () => {
             const input = document.getElementById("newCategoryName");
             const catName = input.value.trim();
 
@@ -611,13 +673,13 @@
             }
 
             categories.push(catName);
-            saveData();
+            await saveData();
             input.value = "";
             render();
             alert(`カテゴリー「${catName}」を追加しました！`);
         });
 
-        window.renameCategory = function (index) {
+        window.renameCategory = async function (index) {
             const inputEl = document.getElementById(`catInput_${index}`);
             const oldName = categories[index];
             const newName = inputEl.value.trim();
@@ -641,12 +703,12 @@
                 if (p.category === oldName) p.category = newName;
             });
 
-            saveData();
+            await saveData();
             render();
             alert(`カテゴリー名を「${oldName}」から「${newName}」に変更しました！`);
         };
 
-        window.updateProduct = function (id) {
+        window.updateProduct = async function (id) {
             const nameInput = document.getElementById(`prodName_${id}`);
             const priceInput = document.getElementById(`prodPrice_${id}`);
             const stockInput = document.getElementById(`prodStock_${id}`);
@@ -669,16 +731,16 @@
                 product.stock = newStock;
                 product.category = newCat;
 
-                saveData();
+                await saveData();
                 render();
                 alert(`商品「${newName}」の情報を更新しました！`);
             }
         };
 
-        window.deleteProduct = function (id) {
+        window.deleteProduct = async function (id) {
             if (confirm("この商品を削除してもよろしいですか？")) {
                 products = products.filter(p => p.id !== id);
-                saveData();
+                await saveData();
                 render();
             }
         };
@@ -704,8 +766,8 @@
 
             if (imageInput.files && imageInput.files[0]) {
                 const reader = new FileReader();
-                reader.onload = function (e) {
-                    addProductData(newId, name, price, stock, category, e.target.result);
+                reader.onload = async function (e) {
+                    await addProductData(newId, name, price, stock, category, e.target.result);
                 };
                 reader.readAsDataURL(imageInput.files[0]);
             } else {
@@ -713,9 +775,9 @@
             }
         });
 
-        function addProductData(id, name, price, stock, category, image) {
+        async function addProductData(id, name, price, stock, category, image) {
             products.push({id: id, name: name, price: price, category: category, image: image, stock: stock, qty: 0});
-            saveData();
+            await saveData();
             document.getElementById("newProductName").value = "";
             document.getElementById("newProductPrice").value = "";
             document.getElementById("newProductStock").value = "50";
@@ -817,7 +879,7 @@
             calculateChange();
         };
 
-        confirmPaymentBtn.addEventListener("click", () => {
+        confirmPaymentBtn.addEventListener("click", async () => {
             const total = getCurrentTotal();
             const received = parseInt(receivedAmountInput.value) || 0;
             const change = received - total;
@@ -841,12 +903,11 @@
             };
 
             salesHistory.push(saleRecord);
-            saveData();
+            products.forEach(p => p.qty = 0); // カートをクリア
+
+            await saveData();
 
             alert(`お会計が完了しました。\n\n合計: ¥${total.toLocaleString()}\nお預かり: ¥${received.toLocaleString()}\nお釣り: ¥${change.toLocaleString()}`);
-
-            products.forEach(p => p.qty = 0);
-            saveData();
 
             checkoutModal.style.display = "none";
             render();
@@ -947,7 +1008,7 @@
                 record.items.forEach(item => {
                     if (productStatsMap[item.id]) {
                         productStatsMap[item.id].totalQty += item.qty;
-                        productStatsMap[item.id].subtotal += item.subtotal.toLocaleString ? item.subtotal : item.subtotal;
+                        productStatsMap[item.id].subtotal += item.subtotal;
                     } else {
                         productStatsMap[item.id] = {
                             name: item.name,
@@ -1004,15 +1065,18 @@
             XLSX.writeFile(wb, `売上レポート_${todayStr}.xlsx`);
         });
 
-        resetSalesBtn.addEventListener("click", () => {
+        resetSalesBtn.addEventListener("click", async () => {
             if (confirm("売上履歴データをリセットしてもよろしいですか？（在庫数は初期状態に戻ります）")) {
                 salesHistory = [];
-                saveData();
+                await saveData();
                 updateSalesModalContent();
                 render();
                 alert("データをリセットしました。");
             }
         });
+
+        // 起動時にクラウド同期を開始
+        initCloudSync();
     </script>
 
 </body>
