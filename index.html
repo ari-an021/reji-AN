@@ -9,7 +9,6 @@
     <!-- SheetJS (xlsx) ライブラリの読み込み -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <style>
-        /* 追加・調整したCSSスタイル */
         .product-img {
             width: 100%;
             height: 120px;
@@ -30,7 +29,6 @@
             font-size: 0.9rem;
         }
 
-        /* ドラッグ＆ドロップ関連のスタイル */
         .manage-product-item {
             cursor: grab;
             transition: background-color 0.2s, border-color 0.2s;
@@ -267,7 +265,7 @@
     <!-- ==================== Firebase SDK (Webモジュール) ==================== -->
     <script type="module">
         import {initializeApp} from "https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js";
-        import {getFirestore, doc, getDoc, setDoc, onSnapshot} from "https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js";
+        import {getFirestore, collection, doc, getDoc, setDoc, deleteDoc, onSnapshot} from "https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js";
 
         // Firebase 接続設定
         const firebaseConfig = {
@@ -297,15 +295,15 @@
         // デフォルトの初期データ
         const defaultCategories = ["キーホルダー", "ステッカー", "文具", "アウトドア用品"];
         const defaultProducts = [
-            {id: 1, name: "アクリルキーホルダー", price: 800, category: "キーホルダー", image: "", stock: 30, qty: 0},
-            {id: 2, name: "ラバーキーホルダー", price: 900, category: "キーホルダー", image: "", stock: 25, qty: 0},
-            {id: 3, name: "ロゴステッカー", price: 300, category: "ステッカー", image: "", stock: 100, qty: 0},
-            {id: 4, name: "ダイカットステッカー", price: 400, category: "ステッカー", image: "", stock: 80, qty: 0},
-            {id: 5, name: "ボールペン", price: 500, category: "文具", image: "", stock: 50, qty: 0},
-            {id: 6, name: "リングノート", price: 600, category: "文具", image: "", stock: 40, qty: 0},
-            {id: 7, name: "マスキングテープ", price: 400, category: "文具", image: "", stock: 60, qty: 0},
-            {id: 8, name: "ミニシェラカップ", price: 1500, category: "アウトドア用品", image: "", stock: 15, qty: 0},
-            {id: 9, name: "カラビナ", price: 700, category: "アウトドア用品", image: "", stock: 20, qty: 0}
+            {id: 1, name: "アクリルキーホルダー", price: 800, category: "キーホルダー", image: "", stock: 30, order: 0},
+            {id: 2, name: "ラバーキーホルダー", price: 900, category: "キーホルダー", image: "", stock: 25, order: 1},
+            {id: 3, name: "ロゴステッカー", price: 300, category: "ステッカー", image: "", stock: 100, order: 2},
+            {id: 4, name: "ダイカットステッカー", price: 400, category: "ステッカー", image: "", stock: 80, order: 3},
+            {id: 5, name: "ボールペン", price: 500, category: "文具", image: "", stock: 50, order: 4},
+            {id: 6, name: "リングノート", price: 600, category: "文具", image: "", stock: 40, order: 5},
+            {id: 7, name: "マスキングテープ", price: 400, category: "文具", image: "", stock: 60, order: 6},
+            {id: 8, name: "ミニシェラカップ", price: 1500, category: "アウトドア用品", image: "", stock: 15, order: 7},
+            {id: 9, name: "カラビナ", price: 700, category: "アウトドア用品", image: "", stock: 20, order: 8}
         ];
 
         // --- DOM要素 ---
@@ -340,48 +338,112 @@
         const resetSalesBtn = document.getElementById("resetSalesBtn");
         const exportExcelBtn = document.getElementById("exportExcelBtn");
 
-        // --- Firestoreリアルタイム同期のセットアップ ---
+        // --- Firestoreリアルタイム同期のセットアップ（独立コレクション方式） ---
         async function initCloudSync() {
-            const storeRef = doc(db, "posStore", "mainData");
+            // 設定・履歴用ドキュメント
+            const settingsRef = doc(db, "posStore", "settings");
+            const settingsSnap = await getDoc(settingsRef);
 
-            const docSnap = await getDoc(storeRef);
-            if (!docSnap.exists()) {
-                await setDoc(storeRef, {
+            if (!settingsSnap.exists()) {
+                await setDoc(settingsRef, {
                     password: "0107",
                     categories: defaultCategories,
-                    products: defaultProducts,
                     salesHistory: []
                 });
             }
 
-            onSnapshot(storeRef, (docSnap) => {
+            // 商品用コレクションの初期データ投入チェック
+            const productsCol = collection(db, "posProducts");
+            // 設定ドキュメントのリアルタイム監視
+            onSnapshot(settingsRef, (docSnap) => {
                 if (docSnap.exists()) {
                     const data = docSnap.data();
                     appPassword = data.password || "0107";
                     categories = data.categories || [];
-                    products = data.products || [];
                     salesHistory = data.salesHistory || [];
+                    checkReady();
+                }
+            });
 
-                    isCloudLoaded = true;
-                    headerTitle.textContent = "ANレジ";
-                    render();
+            // 商品コレクションのリアルタイム監視
+            onSnapshot(productsCol, async (snapshot) => {
+                if (snapshot.empty) {
+                    // 初回：デフォルト商品を個別ドキュメントとして登録
+                    for (const p of defaultProducts) {
+                        await setDoc(doc(db, "posProducts", String(p.id)), p);
+                    }
+                } else {
+                    products = [];
+                    snapshot.forEach(docSnap => {
+                        const pData = docSnap.data();
+                        products.push({
+                            id: Number(docSnap.id),
+                            name: pData.name,
+                            price: pData.price,
+                            category: pData.category,
+                            image: pData.image || "",
+                            stock: pData.stock !== undefined ? pData.stock : 0,
+                            order: pData.order !== undefined ? pData.order : Number(docSnap.id),
+                            qty: 0
+                        });
+                    });
+                    // 並び順（order順）にソート
+                    products.sort((a, b) => a.order - b.order);
+                    checkReady();
                 }
             });
         }
 
-        async function saveData() {
+        function checkReady() {
+            if (categories.length > 0) {
+                isCloudLoaded = true;
+                headerTitle.textContent = "ANレジ";
+                render();
+            }
+        }
+
+        // 基本設定（パスワード・カテゴリー・売上履歴）の保存
+        async function saveSettings() {
             if (!isCloudLoaded) return;
             try {
-                const storeRef = doc(db, "posStore", "mainData");
-                await setDoc(storeRef, {
+                const settingsRef = doc(db, "posStore", "settings");
+                await setDoc(settingsRef, {
                     password: appPassword,
                     categories: categories,
-                    products: products,
                     salesHistory: salesHistory
                 });
             } catch (error) {
-                console.error("保存エラー:", error);
-                alert("データの保存に失敗しました。画像サイズが大きすぎないか確認してください。");
+                console.error("設定保存エラー:", error);
+                alert("設定の保存に失敗しました。");
+            }
+        }
+
+        // 個別商品の保存・更新
+        async function saveProductToCloud(product) {
+            try {
+                const prodRef = doc(db, "posProducts", String(product.id));
+                await setDoc(prodRef, {
+                    name: product.name,
+                    price: product.price,
+                    category: product.category,
+                    image: product.image,
+                    stock: product.stock,
+                    order: product.order !== undefined ? product.order : product.id
+                });
+            } catch (error) {
+                console.error("商品保存エラー:", error);
+                alert("商品の保存に失敗しました。");
+            }
+        }
+
+        // 個別商品の削除
+        async function deleteProductFromCloud(id) {
+            try {
+                const prodRef = doc(db, "posProducts", String(id));
+                await deleteDoc(prodRef);
+            } catch (error) {
+                console.error("商品削除エラー:", error);
+                alert("商品の削除に失敗しました。");
             }
         }
 
@@ -414,7 +476,6 @@
                     const ctx = canvas.getContext("2d");
                     ctx.drawImage(img, 0, 0, width, height);
 
-                    // JPEG形式で圧縮（画質0.7）
                     const dataUrl = canvas.toDataURL("image/jpeg", 0.7);
                     callback(dataUrl);
                 };
@@ -453,7 +514,7 @@
             }
 
             appPassword = newInput;
-            await saveData();
+            await saveSettings();
             document.getElementById("currentPasswordInput").value = "";
             document.getElementById("newPasswordInput").value = "";
             alert("パスワードをクラウド上で更新しました！");
@@ -682,7 +743,12 @@
                     if (fromIndex !== toIndex) {
                         const movedItem = products.splice(fromIndex, 1)[0];
                         products.splice(toIndex, 0, movedItem);
-                        await saveData();
+
+                        // 全ての商品の順序（order）を更新して保存
+                        for (let i = 0; i < products.length; i++) {
+                            products[i].order = i;
+                            await saveProductToCloud(products[i]);
+                        }
                         render();
                     }
                 });
@@ -705,7 +771,7 @@
             }
 
             categories.push(catName);
-            await saveData();
+            await saveSettings();
             input.value = "";
             render();
             alert(`カテゴリー「${catName}」を追加しました！`);
@@ -731,11 +797,14 @@
             }
 
             categories[index] = newName;
-            products.forEach(p => {
-                if (p.category === oldName) p.category = newName;
+            products.forEach(async p => {
+                if (p.category === oldName) {
+                    p.category = newName;
+                    await saveProductToCloud(p);
+                }
             });
 
-            await saveData();
+            await saveSettings();
             render();
             alert(`カテゴリー名を「${oldName}」から「${newName}」に変更しました！`);
         };
@@ -763,7 +832,7 @@
                 product.stock = newStock;
                 product.category = newCat;
 
-                await saveData();
+                await saveProductToCloud(product);
                 render();
                 alert(`商品「${newName}」の情報を更新しました！`);
             }
@@ -772,7 +841,7 @@
         window.deleteProduct = async function (id) {
             if (confirm("この商品を削除してもよろしいですか？")) {
                 products = products.filter(p => p.id !== id);
-                await saveData();
+                await deleteProductFromCloud(id);
                 render();
             }
         };
@@ -795,20 +864,22 @@
             }
 
             const newId = products.length > 0 ? Math.max(...products.map(p => p.id)) + 1 : 1;
+            const newOrder = products.length;
 
             if (imageInput.files && imageInput.files[0]) {
-                // 画像を自動でリサイズ（最大幅300px・高さ300pxに圧縮）してから登録
                 resizeImage(imageInput.files[0], 300, 300, async function (compressedDataUrl) {
-                    await addProductData(newId, name, price, stock, category, compressedDataUrl);
+                    await addProductData(newId, name, price, stock, category, compressedDataUrl, newOrder);
                 });
             } else {
-                addProductData(newId, name, price, stock, category, "");
+                addProductData(newId, name, price, stock, category, "", newOrder);
             }
         });
 
-        async function addProductData(id, name, price, stock, category, image) {
-            products.push({id: id, name: name, price: price, category: category, image: image, stock: stock, qty: 0});
-            await saveData();
+        async function addProductData(id, name, price, stock, category, image, order) {
+            const newProduct = {id: id, name: name, price: price, category: category, image: image, stock: stock, order: order, qty: 0};
+            products.push(newProduct);
+            await saveProductToCloud(newProduct);
+
             document.getElementById("newProductName").value = "";
             document.getElementById("newProductPrice").value = "";
             document.getElementById("newProductStock").value = "50";
@@ -936,7 +1007,7 @@
             salesHistory.push(saleRecord);
             products.forEach(p => p.qty = 0);
 
-            await saveData();
+            await saveSettings();
 
             alert(`お会計が完了しました。\n\n合計: ¥${total.toLocaleString()}\nお預かり: ¥${received.toLocaleString()}\nお釣り: ¥${change.toLocaleString()}`);
 
@@ -1099,7 +1170,7 @@
         resetSalesBtn.addEventListener("click", async () => {
             if (confirm("売上履歴データをリセットしてもよろしいですか？（在庫数は初期状態に戻ります）")) {
                 salesHistory = [];
-                await saveData();
+                await saveSettings();
                 updateSalesModalContent();
                 render();
                 alert("データをリセットしました。");
