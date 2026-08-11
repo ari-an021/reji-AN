@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ANレジ (クラウド同期版)</title>
+    <title>ANレジ</title>
     <link rel="stylesheet" href="style.css">
     <!-- SheetJS (xlsx) ライブラリの読み込み -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -293,17 +293,11 @@
         let isAdminMode = false;
 
         // デフォルトの初期データ
-        const defaultCategories = ["キーホルダー", "ステッカー", "文具", "アウトドア用品"];
+        const defaultCategories = ["キーホルダー・ストラップ", "ステッカー", "文具", "その他"];
         const defaultProducts = [
             {id: 1, name: "アクリルキーホルダー", price: 800, category: "キーホルダー", image: "", stock: 30, order: 0},
             {id: 2, name: "ラバーキーホルダー", price: 900, category: "キーホルダー", image: "", stock: 25, order: 1},
             {id: 3, name: "ロゴステッカー", price: 300, category: "ステッカー", image: "", stock: 100, order: 2},
-            {id: 4, name: "ダイカットステッカー", price: 400, category: "ステッカー", image: "", stock: 80, order: 3},
-            {id: 5, name: "ボールペン", price: 500, category: "文具", image: "", stock: 50, order: 4},
-            {id: 6, name: "リングノート", price: 600, category: "文具", image: "", stock: 40, order: 5},
-            {id: 7, name: "マスキングテープ", price: 400, category: "文具", image: "", stock: 60, order: 6},
-            {id: 8, name: "ミニシェラカップ", price: 1500, category: "アウトドア用品", image: "", stock: 15, order: 7},
-            {id: 9, name: "カラビナ", price: 700, category: "アウトドア用品", image: "", stock: 20, order: 8}
         ];
 
         // --- DOM要素 ---
@@ -894,14 +888,14 @@
             if (isAdminMode) {
                 posScreen.style.display = "none";
                 adminScreen.style.display = "block";
-                headerTitle.textContent = "イベント模擬店レジ 【管理モード】";
+                headerTitle.textContent = "ANレジ 【管理モード】";
                 modeToggleBtn.textContent = "レジ画面に戻る";
                 modeToggleBtn.style.backgroundColor = "#e74c3c";
                 render();
             } else {
                 adminScreen.style.display = "none";
                 posScreen.style.display = "flex";
-                headerTitle.textContent = "イベント模擬店レジ";
+                headerTitle.textContent = "ANレジ";
                 modeToggleBtn.textContent = "⚙️ 管理モードに切替";
                 modeToggleBtn.style.backgroundColor = "rgba(255,255,255,0.2)";
                 render();
