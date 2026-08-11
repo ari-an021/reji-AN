@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ANレジ</title>
+    <title>ANレジ (クラウド同期版)</title>
     <link rel="stylesheet" href="style.css">
     <!-- SheetJS (xlsx) ライブラリの読み込み -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -344,7 +344,6 @@
         async function initCloudSync() {
             const storeRef = doc(db, "posStore", "mainData");
 
-            // 初回起動時にデータがなければデフォルトを書き込む
             const docSnap = await getDoc(storeRef);
             if (!docSnap.exists()) {
                 await setDoc(storeRef, {
@@ -355,7 +354,6 @@
                 });
             }
 
-            // リアルタイムリスナー (別端末での変更が即座に反映される)
             onSnapshot(storeRef, (docSnap) => {
                 if (docSnap.exists()) {
                     const data = docSnap.data();
@@ -371,9 +369,8 @@
             });
         }
 
-        // データをクラウド（Firestore）に保存する関数
         async function saveData() {
-            if (!isCloudLoaded) return; // まだロード中の誤保存を防ぐ
+            if (!isCloudLoaded) return;
             try {
                 const storeRef = doc(db, "posStore", "mainData");
                 await setDoc(storeRef, {
@@ -384,8 +381,44 @@
                 });
             } catch (error) {
                 console.error("保存エラー:", error);
-                alert("データの保存に失敗しました。ネットワーク接続を確認してください。");
+                alert("データの保存に失敗しました。画像サイズが大きすぎないか確認してください。");
             }
+        }
+
+        // --- 画像リサイズ（軽量化）関数 ---
+        function resizeImage(file, maxWidth, maxHeight, callback) {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = function (event) {
+                const img = new Image();
+                img.src = event.target.result;
+                img.onload = function () {
+                    const canvas = document.createElement("canvas");
+                    let width = img.width;
+                    let height = img.height;
+
+                    if (width > height) {
+                        if (width > maxWidth) {
+                            height *= maxWidth / width;
+                            width = maxWidth;
+                        }
+                    } else {
+                        if (height > maxHeight) {
+                            width *= maxHeight / height;
+                            height = maxHeight;
+                        }
+                    }
+
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext("2d");
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    // JPEG形式で圧縮（画質0.7）
+                    const dataUrl = canvas.toDataURL("image/jpeg", 0.7);
+                    callback(dataUrl);
+                };
+            };
         }
 
         // --- パスワード認証 ---
@@ -406,7 +439,6 @@
             }
         });
 
-        // パスワード変更処理
         document.getElementById("changePasswordBtn").addEventListener("click", async () => {
             const currentInput = document.getElementById("currentPasswordInput").value;
             const newInput = document.getElementById("newPasswordInput").value.trim();
@@ -765,11 +797,10 @@
             const newId = products.length > 0 ? Math.max(...products.map(p => p.id)) + 1 : 1;
 
             if (imageInput.files && imageInput.files[0]) {
-                const reader = new FileReader();
-                reader.onload = async function (e) {
-                    await addProductData(newId, name, price, stock, category, e.target.result);
-                };
-                reader.readAsDataURL(imageInput.files[0]);
+                // 画像を自動でリサイズ（最大幅300px・高さ300pxに圧縮）してから登録
+                resizeImage(imageInput.files[0], 300, 300, async function (compressedDataUrl) {
+                    await addProductData(newId, name, price, stock, category, compressedDataUrl);
+                });
             } else {
                 addProductData(newId, name, price, stock, category, "");
             }
@@ -903,7 +934,7 @@
             };
 
             salesHistory.push(saleRecord);
-            products.forEach(p => p.qty = 0); // カートをクリア
+            products.forEach(p => p.qty = 0);
 
             await saveData();
 
